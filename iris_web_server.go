@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kataras/iris/v12"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
@@ -16,7 +17,7 @@ func StartServer(app *iris.Application, conf *Application) {
 		WriteTimeout:   conf.Server.WriteTimeout * time.Second,
 		MaxHeaderBytes: conf.Server.MaxHeaderBytes,
 	}
-	fmt.Sprintf("Server Start  port %d env %s", conf.Server.Port, conf.Server.Environment)
+	SystemLogger.Info("Server Start  port %d env %s", zap.Uint("port", conf.Server.Port), zap.String("env", conf.Server.Environment))
 	if err := app.Run(iris.Server(s), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations,
 		iris.WithConfiguration(iris.Configuration{
 			DisableInterruptHandler:           true,
@@ -30,11 +31,10 @@ func StartServer(app *iris.Application, conf *Application) {
 }
 
 func CloseServer(app *iris.Application) {
-	fmt.Print("system shutdown signal")
 	timeout := 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	// 关闭所有主机
 	app.Shutdown(ctx)
-	fmt.Print("http server shutdown")
+	SystemLogger.Info("http server shutdown")
 }

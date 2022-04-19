@@ -7,11 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
@@ -33,6 +30,7 @@ type Executor interface {
 	TaskBeat(writer http.ResponseWriter, request *http.Request)
 	// TaskIdleBeat 忙碌检测
 	TaskIdleBeat(writer http.ResponseWriter, request *http.Request)
+	RegistryRemove()
 	// Run 运行服务
 	Run() error
 	// Stop 停止服务
@@ -101,9 +99,6 @@ func (e *executor) Run() (err error) {
 	// 监听端口并提供服务
 	e.log.Info("Starting server at " + e.address)
 	go server.ListenAndServe()
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGKILL, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
 	e.registryRemove()
 	return nil
 }
@@ -359,4 +354,8 @@ func (e *executor) TaskBeat(writer http.ResponseWriter, request *http.Request) {
 // TaskIdleBeat 任务日志
 func (e *executor) TaskIdleBeat(writer http.ResponseWriter, request *http.Request) {
 	e.idleBeat(writer, request)
+}
+
+func (e *executor) RegistryRemove() {
+	e.registryRemove()
 }
