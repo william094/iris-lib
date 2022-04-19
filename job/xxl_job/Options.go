@@ -2,7 +2,6 @@ package xxl_job
 
 import (
 	"github.com/go-basic/ipv4"
-	iris_lib "github.com/william094/iris-lib"
 	"go.uber.org/zap"
 	"time"
 )
@@ -28,10 +27,6 @@ func newOptions(opts ...Option) Options {
 
 	for _, o := range opts {
 		o(&opt)
-	}
-
-	if opt.l == nil {
-		opt.l = iris_lib.SystemLogger
 	}
 
 	return opt
