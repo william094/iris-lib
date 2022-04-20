@@ -13,7 +13,7 @@ func init() {
 // Note: Route MUST have the last named parameter wildcard named '{action:path}'.
 // Example:
 //   app.HandleMany("GET", "/debug/pprof /debug/pprof/{action:path}", pprof.New())
-func New() context.Handler {
+func NewPprof() context.Handler {
 	return func(ctx *context.Context) {
 		if action := ctx.Params().Get("action"); action != "" {
 			switch action {

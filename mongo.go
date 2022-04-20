@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Init(db *MongoDb) *mongo.Client {
+func InitMongo(db *MongoDb) *mongo.Client {
 	op := options.Client().ApplyURI(db.Conn).
 		SetConnectTimeout(10 * time.Second).
 		SetHeartbeatInterval(time.Minute)

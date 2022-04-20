@@ -2,7 +2,6 @@ package iris_lib
 
 import (
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 	"os"
 )
 
@@ -11,22 +10,22 @@ var (
 	GOCONF = os.Getenv("GOCONF")
 )
 
-func LoaderConfig(serverName string, rawValue *interface{}) {
+func LoaderConfig(serverName string) (*Application, *viper.Viper) {
+	data := &Application{}
 	if Env == "" || Env == "develop" {
 		Env = "dev"
 	}
-	if GOCONF == "" || GOCONF == "application" {
+	if GOCONF == "" {
 		GOCONF = "./etc/"
 	}
 	viper.AddConfigPath(GOCONF)
 	viper.SetConfigName(serverName + "-" + Env)
 	viper.SetConfigType("yml")
 	if err := viper.ReadInConfig(); err != nil {
-		SystemLogger.Error("配置文件加载失败", zap.Error(err))
 		panic(err)
 	}
-	if err := viper.Unmarshal(rawValue); err != nil {
-		SystemLogger.Error("配置文件加载失败", zap.Error(err))
+	if err := viper.Unmarshal(data); err != nil {
 		panic(err)
 	}
+	return data, viper.GetViper()
 }

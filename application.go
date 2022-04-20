@@ -41,10 +41,11 @@ type LogConf struct {
 type Application struct {
 	Server struct {
 		Port           uint
+		Name           string
+		Environment    string
+		MaxHeaderBytes int
 		ReadTimeout    time.Duration
 		WriteTimeout   time.Duration
-		MaxHeaderBytes int
-		Environment    string
 	}
 	Logger LogConf
 	Data   struct {

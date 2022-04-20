@@ -17,7 +17,7 @@ func StartServer(app *iris.Application, conf *Application) {
 		WriteTimeout:   conf.Server.WriteTimeout * time.Second,
 		MaxHeaderBytes: conf.Server.MaxHeaderBytes,
 	}
-	SystemLogger.Info("Server Start  port %d env %s", zap.Uint("port", conf.Server.Port), zap.String("env", conf.Server.Environment))
+	SystemLogger.Info("Server Start", zap.Uint("port", conf.Server.Port), zap.String("env", conf.Server.Environment))
 	if err := app.Run(iris.Server(s), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations,
 		iris.WithConfiguration(iris.Configuration{
 			DisableInterruptHandler:           true,

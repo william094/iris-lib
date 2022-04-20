@@ -28,14 +28,18 @@ func TracingHandler(ctx iris.Context) {
 		}
 		ct = context.WithValue(ct, "uid", ctx.Values().Get("uid"))
 	}
+	log := ctx.Value("log").(*zap.Logger)
+	if log != nil {
+		ct = context.WithValue(ct, "log", log)
+	}
 	ctx.ResetRequest(ctx.Request().Clone(ct))
 	ctx.Next()
 
 }
 
-// LoggerMiddleware 日志中间件
-func LoggerMiddleware(ctx iris.Context) {
-	path := ctx.Request().URL.Path
+// RequestLogPlugin 日志中间件
+func RequestLogPlugin(ctx iris.Context) {
+	path := ctx.Request().URL.RequestURI()
 	method := ctx.Request().Method
 	IP := ctx.GetHeader("X-Real-Ip")
 

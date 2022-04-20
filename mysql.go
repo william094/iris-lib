@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func InitDb(cfg *MysqlDB, pool *MysqlPool, log *LogConf) *gorm.DB {
+func InitMysql(cfg *MysqlDB, pool *MysqlPool, log *LogConf) *gorm.DB {
 	gormConfig := &gorm.Config{}
 	if cfg.EnableSqlLog {
 		gormConfig = &gorm.Config{Logger: NewGormLog(log.FilePath, log.FileName)}
