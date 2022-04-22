@@ -28,7 +28,8 @@ func TracingHandler(ctx iris.Context) {
 		}
 		ct = context.WithValue(ct, "uid", ctx.Values().Get("uid"))
 	}
-	log := ctx.Value("log").(*zap.Logger)
+
+	log := ctx.Values().Get("log").(*zap.Logger)
 	if log != nil {
 		ct = context.WithValue(ct, "log", log)
 	}
