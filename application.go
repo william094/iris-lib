@@ -67,6 +67,8 @@ type Application struct {
 	}
 	XXLJob struct {
 		Addr         string
+		Port         string
+		AccessToken  string
 		ExecutorName string
 	}
 }

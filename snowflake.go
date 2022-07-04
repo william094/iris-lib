@@ -83,9 +83,9 @@ func (s *Snowflake) GenerateSnowId() string {
 /*
 	Generate creates and returns a custom snowflake ID
 	年月日时分秒毫秒+7位随机数
-	return 202105271946072968397239
+	return 2105271946072968397239
 	年月日时分秒毫秒+4位随机数
-	return 202105272022427398193
+	return 2105272022427398193
 */
 
 func (s *Snowflake) GenerateTimestampId() string {
@@ -105,11 +105,11 @@ func (s *Snowflake) GenerateTimestampId() string {
 	//计算毫秒数
 	diff := now - ((now / 1e3) * 1e3)
 	//毫秒时间戳
-	timestamp := time.Unix(now/1e3, 0).Format("20060102150405") + strconv.FormatInt(diff, 10)
+	timestamp := time.Unix(now/1e3, 0).Format("060102150405") + strconv.FormatInt(diff, 10)
 	//生成7位随机数
-	//r := datacenterId<<timestampShift | (s.workerid << workeridShift) | (s.sequence)
+	r := datacenterId<<timestampShift | (s.workerid << workeridShift) | (s.sequence)
 	//生成4位随机数
-	r := (s.workerid << workeridShift) | (s.sequence)
+	//r := (s.workerid << workeridShift) | (s.sequence)
 	orderId := timestamp + strconv.FormatInt(r, 10)
 	s.Unlock()
 	return orderId
