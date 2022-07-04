@@ -14,25 +14,15 @@ import (
 func TracingHandler(ctx iris.Context) {
 	var traceId string
 	var ct context.Context
-	requestId := ctx.Request().Context().Value("TrackId")
-	if requestId != nil {
-		traceId = requestId.(string)
-	} else if traceId = ctx.Request().Header.Get("TrackId"); traceId == "" {
-		traceId, _ = uuid.GenerateUUID()
-		ct = context.WithValue(ctx.Request().Context(), "TrackId", traceId)
-	}
-	uid := ctx.Values().GetInt64Default("uid", 0)
-	if uid > 0 {
-		if ct == nil {
-			ct = ctx.Request().Context()
+	traceId = ctx.Request().Header.Get("TrackId")
+	if traceId == "" {
+		if requestId := ctx.Request().Context().Value("TrackId"); requestId != nil {
+			traceId = requestId.(string)
+		} else {
+			traceId, _ = uuid.GenerateUUID()
 		}
-		ct = context.WithValue(ct, "uid", ctx.Values().Get("uid"))
 	}
-
-	log := ctx.Values().Get("log").(*zap.Logger)
-	if log != nil {
-		ct = context.WithValue(ct, "log", log)
-	}
+	ct = context.WithValue(ctx.Request().Context(), "TrackId", traceId)
 	ctx.ResetRequest(ctx.Request().Clone(ct))
 	ctx.Next()
 
