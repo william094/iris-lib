@@ -47,7 +47,7 @@ type Application struct {
 		ReadTimeout    time.Duration
 		WriteTimeout   time.Duration
 	}
-	Logger LogConf
+	Logger *LogConf
 	Data   struct {
 		Source []*MysqlDB
 		Pool   *MysqlPool
