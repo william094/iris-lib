@@ -11,12 +11,6 @@ import (
 	"strings"
 )
 
-func SetLogger(ctx iris.Context, logger *zap.Logger) {
-	ct := context.WithValue(ctx.Request().Context(), "log", logger)
-	ctx.ResetRequest(ctx.Request().Clone(ct))
-	ctx.Next()
-}
-
 func TracingHandler(ctx iris.Context) {
 	var traceId string
 	var ct context.Context

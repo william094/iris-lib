@@ -6,7 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func Prometheus(app iris.Application, serverName string) {
+//OpenPrometheus 开启普罗米修斯监控
+func OpenPrometheus(app *iris.Application, serverName string) {
 	m := prometheus.New(serverName, prometheus.DefaultBuckets...)
 	app.Use(m.ServeHTTP)
 	app.Get("/metrics", iris.FromStd(promhttp.Handler()))

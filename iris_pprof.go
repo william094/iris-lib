@@ -10,6 +10,7 @@ func init() {
 	context.SetHandlerName("iris/middleware/pprof.*", "iris.profiling")
 }
 
+//OpenPprof 开启Google pprof追踪
 func OpenPprof(app *iris.Application) {
 	app.HandleMany("GET", "/pprof/{action:path}", NewPprof())
 }
