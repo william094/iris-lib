@@ -1,6 +1,7 @@
 package iris_lib
 
 import (
+	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/context"
 	"net/http/pprof"
 )
@@ -9,7 +10,11 @@ func init() {
 	context.SetHandlerName("iris/middleware/pprof.*", "iris.profiling")
 }
 
-// New returns a new pprof (profile, cmdline, symbol, goroutine, heap, threadcreate, debug/block) Middleware.
+func OpenPprof(app *iris.Application) {
+	app.HandleMany("GET", "/pprof/{action:path}", NewPprof())
+}
+
+// NewPprof New returns a new pprof (profile, cmdline, symbol, goroutine, heap, threadcreate, debug/block) Middleware.
 // Note: Route MUST have the last named parameter wildcard named '{action:path}'.
 // Example:
 //   app.HandleMany("GET", "/debug/pprof /debug/pprof/{action:path}", pprof.New())

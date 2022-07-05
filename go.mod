@@ -6,6 +6,7 @@ require (
 	github.com/Shopify/sarama v1.32.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/hashicorp/go-uuid v1.0.3
+	github.com/iris-contrib/middleware/prometheus v0.0.0-20220605200020-e50b808c7502 // indirect
 	github.com/jonboulle/clockwork v0.2.3 // indirect
 	github.com/kataras/iris/v12 v12.2.0-beta3
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible

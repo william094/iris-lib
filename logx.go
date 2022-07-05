@@ -26,15 +26,11 @@ func InitLog(config *Application) *zap.Logger {
 
 func WithContext(ctx context.Context) *zap.Logger {
 	requestId := ctx.Value("TrackId")
-	uid := ctx.Value("uid")
 	logger := ctx.Value("log").(*zap.Logger)
 	if requestId == nil {
 		requestId, _ = uuid.GenerateUUID()
 	}
 	logger = logger.WithOptions(zap.Fields(zap.String("TrackId", requestId.(string))))
-	if uid != nil {
-		logger = logger.WithOptions(zap.Fields(zap.Int64("uid", uid.(int64))))
-	}
 	return logger
 }
 
