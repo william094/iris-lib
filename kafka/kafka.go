@@ -1,9 +1,10 @@
-package iris_lib
+package kafka
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/Shopify/sarama"
+	"github.com/william094/iris-lib/logx"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -21,7 +22,7 @@ func InitProducer(brokers string, handler SendMsgCallBackHandler) sarama.AsyncPr
 	var err error
 	producer, err := sarama.NewAsyncProducer(address, config)
 	if err != nil {
-		SystemLogger.Error("kafka init failed", zap.Error(err))
+		logx.SystemLogger.Error("kafka init failed", zap.Error(err))
 		panic(err)
 	}
 	SendCallBack(producer, handler)
@@ -37,13 +38,13 @@ func InitConsumer(brokers, group string) sarama.ConsumerGroup {
 	address := strings.Split(brokers, ",")
 	consumer, err := sarama.NewConsumerGroup(address, group, config)
 	if err != nil {
-		SystemLogger.Error("kafka consumerGroup init failed", zap.String("group", group), zap.Error(err))
+		logx.SystemLogger.Error("kafka consumerGroup init failed", zap.String("group", group), zap.Error(err))
 		panic(err)
 	}
 	go func() {
 		for errs := range consumer.Errors() {
 			if errs != nil {
-				SystemLogger.Error("kafka consume err", zap.Error(err))
+				logx.SystemLogger.Error("kafka consume err", zap.Error(err))
 			}
 		}
 	}()
@@ -55,26 +56,26 @@ func StartKafkaConsumer(group, topics string, client sarama.ConsumerGroup, handl
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				SystemLogger.Error("Kafka发送消息异常捕获", zap.Any("err", err))
+				logx.SystemLogger.Error("Kafka发送消息异常捕获", zap.Any("err", err))
 				return
 			}
 		}()
 		for {
 			if err := client.Consume(ctx, strings.Split(topics, ","), handler); err != nil {
-				SystemLogger.Error("quit: kafka consumer ", zap.String("group", group), zap.Error(err))
+				logx.SystemLogger.Error("quit: kafka consumer ", zap.String("group", group), zap.Error(err))
 				switch err {
 				case sarama.ErrClosedClient, sarama.ErrClosedConsumerGroup:
 					// 退出
-					SystemLogger.Error("quit: kafka consumer ", zap.String("group", group), zap.Error(err))
+					logx.SystemLogger.Error("quit: kafka consumer ", zap.String("group", group), zap.Error(err))
 					return
 				case sarama.ErrOutOfBrokers:
-					SystemLogger.Error("kafka 崩溃了~", zap.String("group", group), zap.Error(err))
+					logx.SystemLogger.Error("kafka 崩溃了~", zap.String("group", group), zap.Error(err))
 				default:
-					SystemLogger.Error("kafka exception: ", zap.String("group", group), zap.Error(err))
+					logx.SystemLogger.Error("kafka exception: ", zap.String("group", group), zap.Error(err))
 				}
 			}
 			if err := ctx.Err(); err != nil {
-				SystemLogger.Error("Error from context", zap.String("group", group), zap.Error(err))
+				logx.SystemLogger.Error("Error from context", zap.String("group", group), zap.Error(err))
 				break
 			}
 
@@ -86,13 +87,13 @@ func SendMsg(topic, key string, data interface{}, producer sarama.AsyncProducer)
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				SystemLogger.Error("Kafka发送消息异常捕获", zap.Any("err", err))
+				logx.SystemLogger.Error("Kafka发送消息异常捕获", zap.Any("err", err))
 				return
 			}
 		}()
 		msg, err := json.Marshal(data)
 		if err != nil {
-			SystemLogger.Error("Kafka发送消息-消息体序列化失败", zap.String("topic", topic),
+			logx.SystemLogger.Error("Kafka发送消息-消息体序列化失败", zap.String("topic", topic),
 				zap.Any("data", data), zap.Error(err))
 			return
 		}
@@ -101,7 +102,7 @@ func SendMsg(topic, key string, data interface{}, producer sarama.AsyncProducer)
 			Key:   sarama.StringEncoder(key),
 			Value: sarama.StringEncoder(msg),
 		}
-		SystemLogger.Info("kafka消息发送完成", zap.String("topic", topic), zap.String("key", key),
+		logx.SystemLogger.Info("kafka消息发送完成", zap.String("topic", topic), zap.String("key", key),
 			zap.Any("data", data))
 	}()
 
@@ -111,21 +112,21 @@ func SendCallBack(producer sarama.AsyncProducer, handler SendMsgCallBackHandler)
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				SystemLogger.Error("发送回调处理异常", zap.Any("err", err))
+				logx.SystemLogger.Error("发送回调处理异常", zap.Any("err", err))
 				return
 			}
 		}()
 		for {
 			select {
 			case res := <-producer.Successes():
-				SystemLogger.Debug("send success", zap.String("topic", res.Topic),
+				logx.SystemLogger.Debug("send success", zap.String("topic", res.Topic),
 					zap.Int32("partition", res.Partition), zap.Int64("offset", res.Offset))
 			case errorMsg := <-producer.Errors():
 				keys, _ := errorMsg.Msg.Key.Encode()
-				SystemLogger.Error("send failed", zap.String("topic", errorMsg.Msg.Topic),
+				logx.SystemLogger.Error("send failed", zap.String("topic", errorMsg.Msg.Topic),
 					zap.String("key", string(keys)), zap.Error(errorMsg.Err))
 				if result := handler.OnErrors(errorMsg.Msg); result != nil {
-					SystemLogger.Error("发送失败回调处理异常", zap.Error(result))
+					logx.SystemLogger.Error("发送失败回调处理异常", zap.Error(result))
 				}
 			}
 		}
@@ -139,5 +140,5 @@ func Close(producer sarama.AsyncProducer, consumer sarama.ConsumerGroup) {
 	if consumer != nil {
 		consumer.Close()
 	}
-	SystemLogger.Info("kafka exit。。。。")
+	logx.SystemLogger.Info("kafka exit。。。。")
 }

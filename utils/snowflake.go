@@ -1,4 +1,4 @@
-package iris_lib
+package utils
 
 import (
 	"errors"

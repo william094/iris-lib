@@ -1,12 +1,14 @@
-package iris_lib
+package job
 
 import (
 	"github.com/kataras/iris/v12"
+	"github.com/william094/iris-lib/configuration"
+	"github.com/william094/iris-lib/logx"
 	"github.com/xxl-job/xxl-job-executor-go"
 	"go.uber.org/zap"
 )
 
-func InitExecutor(app *iris.Application, conf *Application) *xxl.Executor {
+func InitExecutor(app *iris.Application, conf *configuration.Application) *xxl.Executor {
 	//初始化执行器
 	exec := xxl.NewExecutor(
 		xxl.ServerAddr(conf.XXLJob.Addr),
@@ -52,5 +54,5 @@ func (l *XxlJobLog) Info(format string, a ...interface{}) {
 }
 
 func (l *XxlJobLog) Error(format string, a ...interface{}) {
-	SystemLogger.Error(format, zap.Any("params", a))
+	logx.SystemLogger.Error(format, zap.Any("params", a))
 }

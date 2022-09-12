@@ -1,10 +1,11 @@
-package iris_lib
+package plugin
 
 import (
 	"bytes"
 	"context"
 	"github.com/hashicorp/go-uuid"
 	"github.com/kataras/iris/v12"
+	"github.com/william094/iris-lib/logx"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
@@ -57,6 +58,6 @@ func RequestLogPlugin(ctx iris.Context) {
 	ctx.Next()
 	//下面是返回日志
 	respStr := string(ctx.Recorder().Body())
-	WithContext(ctx.Request().Context()).Info("访问日志", zap.String("path", path),
+	logx.SystemLogger.Info("访问日志", zap.String("path", path),
 		zap.String("method", method), zap.String("IP", IP), zap.String("params", params), zap.String("resp", respStr))
 }

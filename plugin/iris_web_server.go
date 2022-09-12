@@ -1,15 +1,17 @@
-package iris_lib
+package plugin
 
 import (
 	"context"
 	"fmt"
 	"github.com/kataras/iris/v12"
+	"github.com/william094/iris-lib/configuration"
+	"github.com/william094/iris-lib/logx"
 	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
 
-func StartServer(app *iris.Application, conf *Application) {
+func StartServer(app *iris.Application, conf *configuration.Application) {
 	s := &http.Server{
 		Addr:           fmt.Sprintf(":%d", conf.Server.Port),
 		Handler:        app,
@@ -17,7 +19,7 @@ func StartServer(app *iris.Application, conf *Application) {
 		WriteTimeout:   conf.Server.WriteTimeout * time.Second,
 		MaxHeaderBytes: conf.Server.MaxHeaderBytes,
 	}
-	SystemLogger.Info("Server Start", zap.Uint("port", conf.Server.Port), zap.String("env", conf.Server.Environment))
+	logx.SystemLogger.Info("Server Start", zap.Uint("port", conf.Server.Port), zap.String("env", conf.Server.Environment))
 	if err := app.Run(iris.Server(s), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations,
 		iris.WithConfiguration(iris.Configuration{
 			DisableInterruptHandler:           true,
@@ -36,5 +38,5 @@ func CloseServer(app *iris.Application) {
 	defer cancel()
 	// 关闭所有主机
 	app.Shutdown(ctx)
-	SystemLogger.Info("http server shutdown")
+	logx.SystemLogger.Info("http server shutdown")
 }

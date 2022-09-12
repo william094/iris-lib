@@ -1,7 +1,8 @@
-package iris_lib
+package rabbitMq
 
 import (
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/william094/iris-lib/logx"
 	"go.uber.org/zap"
 	"net"
 	"runtime/debug"
@@ -9,6 +10,8 @@ import (
 )
 
 type RabbitMQ struct {
+	Url               string
+	Vhost             string
 	Connection        *amqp.Connection
 	Channel           *amqp.Channel
 	ReconnectionWatch chan *amqp.Error
@@ -50,29 +53,66 @@ func MakeMessage(routingKey, expiration string, body []byte, args amqp.Table) *M
 	}
 }
 
-func OpenConnection(address string) *RabbitMQ {
-	rabbitmq := &RabbitMQ{}
-	//连接到rabbitmq
+func OpenConnection(vhost, url string) *RabbitMQ {
+	rabbitmq, err := Connection(vhost, url)
+	if err != nil {
+		panic(err)
+	}
+	return rabbitmq
+}
+
+func Connection(vhost, url string) (*RabbitMQ, error) {
 	mqConfig := amqp.Config{
 		Heartbeat: time.Second * 5,
 		Dial: func(network, addr string) (net.Conn, error) {
-			return net.DialTimeout(network, addr, 10*time.Second)
+			return net.DialTimeout(network, addr, 20*time.Minute)
 		},
 	}
-	conn, err := amqp.DialConfig(address, mqConfig)
+	if vhost != "" {
+		mqConfig.Vhost = vhost
+	}
+	conn, err := amqp.DialConfig(url, mqConfig)
 	if err != nil {
-		SystemLogger.Info("MQ连接失败...")
-		panic(err)
+		logx.SystemLogger.Info("MQ连接失败...")
+		return nil, err
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		SystemLogger.Info("MQ通道打开失败...")
-		panic(err)
+		logx.SystemLogger.Info("MQ通道打开失败...")
+		return nil, err
 	}
-	rabbitmq.ReconnectionWatch = ch.NotifyClose(make(chan *amqp.Error, 1))
-	rabbitmq.Connection = conn
-	rabbitmq.Channel = ch
-	return rabbitmq
+	return &RabbitMQ{
+		Url:        url,
+		Vhost:      vhost,
+		Connection: conn,
+		Channel:    ch,
+	}, nil
+}
+
+func Reconnection(rabbitmq *RabbitMQ) {
+	for {
+		select {
+		case s1 := <-rabbitmq.Connection.NotifyClose(make(chan *amqp.Error, 1)):
+			logx.SystemLogger.Error("connection notify close", zap.Error(s1))
+			if r, err := Connection(rabbitmq.Vhost, rabbitmq.Url); err != nil {
+				logx.SystemLogger.Error("connection notify close reconnection error", zap.Error(err))
+			} else {
+				rabbitmq.Connection = r.Connection
+				rabbitmq.Channel = r.Channel
+				logx.SystemLogger.Error("connection notify close,reconnect success")
+			}
+		case s2 := <-rabbitmq.Channel.NotifyClose(make(chan *amqp.Error, 1)):
+			logx.SystemLogger.Error("channel notify close", zap.Error(s2))
+
+			if r, err := Connection(rabbitmq.Vhost, rabbitmq.Url); err != nil {
+				logx.SystemLogger.Error("channel notify close reconnection failed", zap.Error(err))
+			} else {
+				rabbitmq.Connection = r.Connection
+				rabbitmq.Channel = r.Channel
+				logx.SystemLogger.Error("channel notify close,reconnect success")
+			}
+		}
+	}
 }
 
 func NewProducer(exchangeName, exchangeType string, rabbitmq *RabbitMQ) *Producer {
@@ -92,15 +132,16 @@ func NewProducer(exchangeName, exchangeType string, rabbitmq *RabbitMQ) *Produce
 		nil,          //其他参数
 	)
 	if err != nil {
-		SystemLogger.Info("MQ通道声明交换器失败...", zap.String("exchangeName", exchangeName))
+		logx.SystemLogger.Info("MQ通道声明交换器失败...", zap.String("exchangeName", exchangeName))
 		//panic(err)
 	}
 	if err := producer.RabbitMq.Channel.Confirm(false); err != nil {
-		SystemLogger.Info("MQ通道发送确认开启失败...", zap.String("exchangeName", exchangeName))
+		logx.SystemLogger.Info("MQ通道发送确认开启失败...", zap.String("exchangeName", exchangeName))
 		//panic(err)
 	}
 	//声明一个发送确认回调chan
 	producer.ConfirmWatch = producer.RabbitMq.Channel.NotifyPublish(make(chan amqp.Confirmation, 1))
+	go Reconnection(rabbitmq)
 	return producer
 }
 
@@ -139,9 +180,10 @@ func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.T
 		false,     //当 noWait 为 true 时，不要等待服务器确认请求并立即开始交付。如果无法消费，则会引发通道异常并关闭通道
 		nil)
 	if err != nil {
-		SystemLogger.Info("消费监听失败", zap.Error(err), zap.String("strack", string(debug.Stack())))
+		logx.SystemLogger.Info("消费监听失败", zap.Error(err), zap.String("strack", string(debug.Stack())))
 		panic(err)
 	}
+	go Reconnection(rabbitmq)
 	for {
 		select {
 		case msg := <-delivery:
@@ -173,29 +215,29 @@ func (p *Producer) SendMessage(msg *Message, confirmMethod SendConfirm) error {
 		DeliveryMode: 2,              //2:消息持久化到磁盘
 		Expiration:   msg.Expiration, //过期时间
 	}); err != nil {
-		SystemLogger.Info("消息发送失败", zap.Any("messageInfo", msg))
+		logx.SystemLogger.Info("消息发送失败", zap.Any("messageInfo", msg))
 		return err
 	}
-	SystemLogger.Info("消息发送成功", zap.Any("messageInfo", msg))
+	logx.SystemLogger.Info("消息发送成功", zap.Any("messageInfo", msg))
 	return nil
 }
 
 func (r *RabbitMQ) Close() {
 	if err := r.Channel.Close(); err != nil {
-		SystemLogger.Info("channel close failed")
+		logx.SystemLogger.Info("channel close failed")
 	}
 	if err := r.Connection.Close(); err != nil {
-		SystemLogger.Info("connection close failed")
+		logx.SystemLogger.Info("connection close failed")
 	}
-	SystemLogger.Info("close ")
+	logx.SystemLogger.Info("close ")
 }
 
 // 消息确认
 func confirmOne(confirms chan amqp.Confirmation, msg *Message) {
 	if confirmed := <-confirms; confirmed.Ack {
-		SystemLogger.Info("MQ发送确认成功", zap.Any("body", msg), zap.Any("delivery tag", confirmed.DeliveryTag))
+		logx.SystemLogger.Debug("MQ发送确认成功", zap.Any("body", msg), zap.Any("delivery tag", confirmed.DeliveryTag))
 	} else {
 		//可以尝试重发
-		SystemLogger.Info("MQ发送确认失败", zap.Any("body", msg), zap.Any("delivery tag", confirmed.DeliveryTag))
+		logx.SystemLogger.Info("MQ发送确认失败", zap.Any("body", msg), zap.Any("delivery tag", confirmed.DeliveryTag))
 	}
 }

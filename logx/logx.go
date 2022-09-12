@@ -1,9 +1,10 @@
-package iris_lib
+package logx
 
 import (
 	"context"
 	"github.com/hashicorp/go-uuid"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	"github.com/william094/iris-lib/configuration"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
@@ -16,7 +17,7 @@ var (
 	SystemLogger *zap.Logger
 )
 
-func InitLog(config *Application) *zap.Logger {
+func InitLog(config *configuration.Application) *zap.Logger {
 	logPath := config.Logger.FilePath
 	applicationName := config.Logger.FileName
 	enableConsoleOutPut := config.Logger.ConsoleEnable
@@ -32,6 +33,14 @@ func WithContext(ctx context.Context) *zap.Logger {
 	}
 	logger = logger.WithOptions(zap.Fields(zap.String("TrackId", requestId.(string))))
 	return logger
+}
+
+func TrackLogger(ctx context.Context, logger *zap.Logger) *zap.Logger {
+	trackId := ctx.Value("TrackId")
+	if trackId == "" {
+		trackId, _ = uuid.GenerateUUID()
+	}
+	return logger.WithOptions(zap.Fields(zap.String("TrackId", trackId.(string))))
 }
 
 func globalLogZap(logPath, applicationName string, enableConsoleOutPut bool) *zap.Logger {

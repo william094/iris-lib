@@ -1,4 +1,4 @@
-package iris_lib
+package plugin
 
 import (
 	"github.com/iris-contrib/middleware/prometheus"

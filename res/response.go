@@ -1,4 +1,4 @@
-package iris_lib
+package res
 
 import "github.com/kataras/iris/v12"
 
@@ -6,6 +6,10 @@ type ErrMsg struct {
 	Code    int    `json:"code"`
 	Msg     string `json:"msg"`
 	Message string `json:"-"`
+}
+
+func (e ErrMsg) Error() string {
+	return e.Msg
 }
 
 type Result struct {
@@ -36,4 +40,8 @@ func Error(err ErrMsg) *Result {
 func Return(result *Result, ctx iris.Context) {
 	ctx.Record()
 	ctx.JSON(result)
+}
+
+func ReturnByError(err ErrMsg, ctx iris.Context) {
+	Return(Error(err), ctx)
 }

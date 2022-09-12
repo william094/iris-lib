@@ -1,4 +1,4 @@
-package iris_lib
+package configuration
 
 import (
 	"encoding/json"
