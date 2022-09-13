@@ -55,6 +55,7 @@ func PostByJson(ctx context.Context, url string, params interface{}) ([]byte, er
 	logx.SystemLogger.Info("POST Request", zap.String("url", url), zap.Any("params", params))
 	body, err := json.Marshal(params)
 	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", CONTENTTYPE_JSON)
 	if ctx != nil && ctx.Value(TrackId) != nil {
 		req.Header.Set(TrackId, ctx.Value(TrackId).(string))
 		req = req.Clone(ctx)

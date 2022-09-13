@@ -33,7 +33,9 @@ type Message struct {
 
 type ConsumerMethod func(msg amqp.Delivery) error
 
-type SendConfirm func(confirms chan amqp.Confirmation, msg *Message)
+type SendConfirm interface {
+	Confirm(confirms chan amqp.Confirmation, msg *Message)
+}
 
 type Consumer struct {
 	RabbitMq     *RabbitMQ
@@ -204,7 +206,7 @@ func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.T
 
 func (p *Producer) SendMessage(msg *Message, confirmMethod SendConfirm) error {
 	if confirmMethod != nil {
-		defer confirmMethod(p.ConfirmWatch, msg)
+		defer confirmMethod.Confirm(p.ConfirmWatch, msg)
 	} else {
 		defer confirmOne(p.ConfirmWatch, msg)
 	}
