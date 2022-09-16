@@ -10,18 +10,18 @@ import (
 	"strings"
 )
 
-func LoaderConfig(configPath, configName, configType string) (*Application, *viper.Viper) {
-	data := &Application{}
+func LoaderConfig(configPath, configName, configType string, configMapping interface{}) *viper.Viper {
+	//data := &Application{}
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)
 	viper.AddConfigPath(configPath)
 	if err := viper.ReadInConfig(); err != nil {
 		panic(err)
 	}
-	if err := viper.Unmarshal(data); err != nil {
+	if err := viper.Unmarshal(configMapping); err != nil {
 		panic(err)
 	}
-	return data, viper.GetViper()
+	return viper.GetViper()
 }
 
 func LoadConfigFromApollo(apolloConfigFile string) (*viper.Viper, error) {

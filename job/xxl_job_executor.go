@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func InitExecutor(app *iris.Application, conf *configuration.Application) *xxl.Executor {
+func InitExecutor(app *iris.Application, conf *configuration.Application) xxl.Executor {
 	//初始化执行器
 	exec := xxl.NewExecutor(
 		xxl.ServerAddr(conf.XXLJob.Addr),
@@ -43,7 +43,7 @@ func InitExecutor(app *iris.Application, conf *configuration.Application) *xxl.E
 	app.Post("idleBeat", func(ctx iris.Context) {
 		exec.IdleBeat(ctx.ResponseWriter(), ctx.Request())
 	})
-	return &exec
+	return exec
 }
 
 type XxlJobLog struct {
