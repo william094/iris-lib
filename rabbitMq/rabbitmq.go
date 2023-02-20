@@ -15,6 +15,7 @@ type RabbitMQ struct {
 	Connection        *amqp.Connection
 	Channel           *amqp.Channel
 	ReconnectionWatch chan *amqp.Error
+	IsReCon           chan int
 }
 
 type Producer struct {
@@ -83,12 +84,15 @@ func Connection(vhost, url string) (*RabbitMQ, error) {
 		logx.SystemLogger.Info("MQ通道打开失败...")
 		return nil, err
 	}
-	return &RabbitMQ{
+	rabbitmq := &RabbitMQ{
 		Url:        url,
 		Vhost:      vhost,
 		Connection: conn,
 		Channel:    ch,
-	}, nil
+		IsReCon:    make(chan int),
+	}
+	go Reconnection(rabbitmq)
+	return rabbitmq, nil
 }
 
 func Reconnection(rabbitmq *RabbitMQ) {
@@ -101,16 +105,17 @@ func Reconnection(rabbitmq *RabbitMQ) {
 			} else {
 				rabbitmq.Connection = r.Connection
 				rabbitmq.Channel = r.Channel
+				rabbitmq.IsReCon <- 1
 				logx.SystemLogger.Error("connection notify close,reconnect success")
 			}
 		case s2 := <-rabbitmq.Channel.NotifyClose(make(chan *amqp.Error, 1)):
 			logx.SystemLogger.Error("channel notify close", zap.Error(s2))
-
 			if r, err := Connection(rabbitmq.Vhost, rabbitmq.Url); err != nil {
 				logx.SystemLogger.Error("channel notify close reconnection failed", zap.Error(err))
 			} else {
 				rabbitmq.Connection = r.Connection
 				rabbitmq.Channel = r.Channel
+				rabbitmq.IsReCon <- 1
 				logx.SystemLogger.Error("channel notify close,reconnect success")
 			}
 		}
@@ -143,17 +148,16 @@ func NewProducer(exchangeName, exchangeType string, rabbitmq *RabbitMQ) *Produce
 	}
 	//声明一个发送确认回调chan
 	producer.ConfirmWatch = producer.RabbitMq.Channel.NotifyPublish(make(chan amqp.Confirmation, 1))
-	go Reconnection(rabbitmq)
 	return producer
 }
 
-func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.Table, method ConsumerMethod, rabbitmq *RabbitMQ) {
+func newConsumer(exchangeName, queueName, bindingKey string, args amqp.Table,
+	rabbitmq *RabbitMQ) *Consumer {
 	consumer := &Consumer{
 		ExchangeName: exchangeName,
 		QueueName:    queueName,
 		BindingKey:   bindingKey,
 		Args:         args,
-		Call:         method,
 	}
 	consumer.RabbitMq = rabbitmq
 	//声明一个队列
@@ -173,6 +177,12 @@ func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.T
 		false,        //当 noWait 为 false 且无法绑定队列时，通道将因错误而关闭
 		args,         //其他参数
 	)
+	return consumer
+
+}
+
+func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.Table, method ConsumerMethod, rabbitmq *RabbitMQ) {
+	consumer := newConsumer(exchangeName, queueName, bindingKey, args, rabbitmq)
 	delivery, err := consumer.RabbitMq.Channel.Consume(
 		queueName, //监听队列名称
 		"",        //监听消费服务名称
@@ -185,9 +195,11 @@ func StartRabbitConsumer(exchangeName, queueName, bindingKey string, args amqp.T
 		logx.SystemLogger.Info("消费监听失败", zap.Error(err), zap.String("strack", string(debug.Stack())))
 		panic(err)
 	}
-	go Reconnection(rabbitmq)
 	for {
 		select {
+		case <-rabbitmq.IsReCon:
+			logx.SystemLogger.Info("重连重启消费", zap.Error(err))
+			go StartRabbitConsumer(exchangeName, queueName, bindingKey, args, method, rabbitmq)
 		case msg := <-delivery:
 			if rabbitmq.Connection.IsClosed() || rabbitmq.Channel.IsClosed() {
 				msg.Reject(true)
